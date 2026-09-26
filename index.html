@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Next Clean.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=IBM+Plex+Mono:wght@400&family=Saira+Condensed:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="scroll-space"></div>
+    <canvas id="view"></canvas>
+
+    <header>
+      <span class="nav-side">Handheld</span>
+      <span class="wordmark">Clean</span>
+      <span class="nav-side">01</span>
+    </header>
+
+    <h1 id="hero-title">The Next Clean.</h1>
+
+    <aside id="copy">
+      <p class="kicker">Handheld Cleaner</p>
+      <h2>꼬임이 그립이 된다.</h2>
+      <p>
+        블랙 리브가 아이보리 셸을 한 바퀴 감아 내리며 손잡이와 본체를 한 덩어리로
+        잇습니다. 골을 따라 손가락이 앉고, 잡은 자세가 곧 실루엣이 됩니다.
+      </p>
+      <p>
+        코퍼 링 하나가 바디와 롤러를 나눕니다. 전원과 네 개의 점은 그 위, 엄지가
+        머무는 면에 있습니다.
+      </p>
+      <dl>
+        <div>
+          <dd>나선형 리브</dd>
+          <dt>그립</dt>
+        </div>
+        <div>
+          <dd>코퍼 링</dd>
+          <dt>조인트</dt>
+        </div>
+        <div>
+          <dd>와이드 롤러</dd>
+          <dt>헤드</dt>
+        </div>
+      </dl>
+    </aside>
+
+    <p id="hint">Scroll</p>
+    <div id="progress"></div>
+
+    <div id="loader">
+      <p>Loading</p>
+      <span id="loader-pct">0</span>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
