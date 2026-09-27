@@ -17,16 +17,39 @@
     <canvas id="view"></canvas>
 
     <header>
-      <span class="nav-side">Handheld</span>
+      <div class="head-left">
+        <span id="open-kicker">Handheld</span>
+        <nav id="nav">
+          <a href="#intro" data-to="0">Intro</a>
+          <a href="#turn" data-to="0.08">Turn</a>
+          <a href="#form" data-to="0.4">Form</a>
+          <a href="#spec" data-to="0.74">Spec</a>
+        </nav>
+      </div>
       <span class="wordmark">Clean</span>
-      <span class="nav-side">01</span>
+      <span id="open-index" class="nav-side">01</span>
     </header>
 
     <h1 id="hero-title">The Next Clean.</h1>
 
+    <div id="form-copy">
+      <article>
+        <p class="kicker">그립</p>
+        <p>블랙 리브가 손의 경로를 따라 감긴다.</p>
+      </article>
+      <article>
+        <p class="kicker">조인트</p>
+        <p>코퍼 링 하나가 바디와 헤드를 나눈다.</p>
+      </article>
+      <article>
+        <p class="kicker">헤드</p>
+        <p>롤러는 낮고 넓다.</p>
+      </article>
+    </div>
+
+    <h2 id="type-title">꼬임이 그립이 된다.</h2>
+
     <aside id="copy">
-      <p class="kicker">Handheld Cleaner</p>
-      <h2>꼬임이 그립이 된다.</h2>
       <p>
         블랙 리브가 아이보리 셸을 한 바퀴 감아 내리며 손잡이와 본체를 한 덩어리로
         잇습니다. 골을 따라 손가락이 앉고, 잡은 자세가 곧 실루엣이 됩니다.
@@ -55,7 +78,6 @@
     <div id="progress"></div>
 
     <div id="loader">
-      <p>Loading</p>
       <span id="loader-pct">0</span>
     </div>
 

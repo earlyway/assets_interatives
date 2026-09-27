@@ -5,13 +5,25 @@ const TURNS = 5
 const FOV = 28
 const BASE_YAW = 0
 
+const FORM_POSES = [
+  { yaw: 0, pitch: 0.02, margin: 1.62, look: 0.02 },
+  { yaw: Math.PI * 0.5, pitch: 0.1, margin: 1.48, look: 0.04 },
+  { yaw: 0.2, pitch: 0.08, margin: 1.58, look: 0 },
+]
+
 const canvas = document.querySelector('#view')
 const titleEl = document.querySelector('#hero-title')
+const typeEl = document.querySelector('#type-title')
 const copyEl = document.querySelector('#copy')
+const formArticles = [...document.querySelectorAll('#form-copy article')]
 const hintEl = document.querySelector('#hint')
 const progressEl = document.querySelector('#progress')
 const loaderEl = document.querySelector('#loader')
 const loaderPct = document.querySelector('#loader-pct')
+const openKicker = document.querySelector('#open-kicker')
+const openIndex = document.querySelector('#open-index')
+const nav = document.querySelector('#nav')
+const navLinks = [...nav.querySelectorAll('a')]
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -78,20 +90,39 @@ loader.load(
     dims = box.getSize(new THREE.Vector3())
 
     document.fonts.ready.then(() => {
+      fitTypeTitle()
       loaderEl.classList.add('hide')
     })
   },
   (event) => {
     if (!event.total) return
     const pct = Math.round((event.loaded / event.total) * 100)
-    loaderPct.textContent = String(pct).padStart(2, '0')
+    loaderPct.textContent = String(pct)
   },
   () => {
-    loaderPct.textContent = '파일을 열 수 없습니다'
+    loaderPct.textContent = '—'
   },
 )
 
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+window.scrollTo(0, 0)
+
+navLinks.forEach((link) => {
+  link.addEventListener('click', (event) => {
+    event.preventDefault()
+    const to = Number(link.dataset.to)
+    const max = document.documentElement.scrollHeight - window.innerHeight
+    window.scrollTo({ top: max * to, behavior: 'smooth' })
+  })
+})
+
+const pointer = { x: 0, y: 0 }
+const pointerSmooth = { x: 0, y: 0 }
+
+window.addEventListener('pointermove', (event) => {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+  pointer.y = (event.clientY / window.innerHeight) * 2 - 1
+})
 
 let targetP = 0
 let progress = 0
@@ -109,8 +140,12 @@ window.addEventListener('scroll', () => {
   targetP = scrollTarget()
 }, { passive: true })
 
-window.addEventListener('resize', resize)
+window.addEventListener('resize', () => {
+  resize()
+  fitTypeTitle()
+})
 
+fitTypeTitle()
 rafId = requestAnimationFrame(tick)
 
 function tick(now) {
@@ -122,6 +157,10 @@ function tick(now) {
     progress += (targetP - progress) * k
     if (Math.abs(targetP - progress) < 0.0004) progress = targetP
 
+    const pointerK = 1 - Math.exp(-4 * dt)
+    pointerSmooth.x += (pointer.x - pointerSmooth.x) * pointerK
+    pointerSmooth.y += (pointer.y - pointerSmooth.y) * pointerK
+
     update(progress)
     renderer.render(scene, camera)
   } catch (err) {
@@ -132,45 +171,140 @@ function tick(now) {
 
 function update(p) {
   const narrow = window.innerWidth < 860
-  const spinT = range(p, 0, 0.56)
-  const zoomT = smoother(spinT)
-  const titleIn = smoother(range(p, 0.54, 0.68))
-  const titleOut = smoother(range(p, 0.76, 0.88))
-  const splitT = smoother(range(p, 0.74, 1))
-  const textIn = smoother(range(p, 0.8, 0.96))
-  const hint = 1 - smoother(range(p, 0.02, 0.1))
-  const titleFocus = titleIn * (1 - splitT)
+  const turn = range(p, 0.08, 0.4)
+  const formU = range(p, 0.4, 0.62)
+  const weights = formWeights(formU)
+  const pose = blendPoses(weights)
 
-  const margin = lerp(lerp(2.2, narrow ? 1.42 : 1.46, zoomT), narrow ? 1.95 : 1.36, splitT)
+  const turnTitleIn = smoother(range(p, 0.336, 0.4))
+  const turnTitleOut = smoother(range(p, 0.4, 0.425))
+  const closeTitle = smoother(range(p, 0.93, 0.98))
+  const titleOpacity = Math.min(1, turnTitleIn * (1 - turnTitleOut) + closeTitle)
+  const lift = turnTitleIn * (1 - smoother(range(p, 0.43, 0.47)))
+
+  const formHold = smoother(range(p, 0.4, 0.44)) * (1 - smoother(range(p, 0.62, 0.68)))
+  const captionGate = smoother(range(p, 0.405, 0.45)) * (1 - smoother(range(p, 0.575, 0.615)))
+  const typeAmt = smoother(range(p, 0.62, 0.67)) * (1 - smoother(range(p, 0.7, 0.74)))
+  const specAmt = smoother(range(p, 0.74, 0.82)) * (1 - smoother(range(p, 0.88, 0.92)))
+  const openChrome = 1 - smoother(range(p, 0.04, 0.1))
+  const hint = 1 - smoother(range(p, 0.012, 0.05))
+  const formLight = smoother(range(p, 0.4, 0.45)) * (1 - smoother(range(p, 0.58, 0.62)))
+
+  pivot.rotation.y = BASE_YAW + turn * Math.PI * 2 * TURNS
+
+  const margin = marginAt(p, pose.margin, narrow)
   const width = Math.max(dims.x, dims.z)
   const dist = frameDistance(FOV, camera.aspect, width, dims.y, margin)
-
-  pivot.rotation.y = BASE_YAW + spinT * Math.PI * 2 * TURNS
-  const ndcX = narrow ? 0 : -0.36 * splitT
-  const ndcY = (narrow ? 0.34 * splitT : 0) + titleFocus * 0.18
   const halfH = Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * dist
   const halfW = halfH * camera.aspect
+
+  let ndcX = 0
+  let ndcY = lift * (narrow ? 0.2 : 0.26)
+  ndcY -= weights[2] * formHold * (narrow ? 0.04 : 0.1)
+  if (narrow) ndcY += specAmt * 0.28 + captionGate * 0.08
+  else ndcX = specAmt * -0.46
+
   pivot.position.set(ndcX * halfW, ndcY * halfH, 0)
-  camera.clearViewOffset()
 
-  camera.position.set(0, dims.y * 0.02, dist)
-  camera.lookAt(0, 0, 0)
+  const orbitYaw = pose.yaw * formHold
+  const orbitPitch = pose.pitch * formHold
+  const lookY = pose.look * dims.y * formHold
+  const cp = Math.cos(orbitPitch)
+  camera.position.set(
+    Math.sin(orbitYaw) * dist * cp,
+    Math.sin(orbitPitch) * dist + dims.y * 0.02,
+    Math.cos(orbitYaw) * dist * cp,
+  )
+  camera.lookAt(0, lookY, 0)
 
-  const titleOpacity = titleIn * (1 - titleOut)
-  const titleLift = (1 - titleIn) * 28
+  key.position.set(
+    2.2 + pointerSmooth.x * 0.65 * formLight,
+    3.4 - pointerSmooth.y * 0.4 * formLight,
+    2.6,
+  )
+
   titleEl.style.opacity = String(titleOpacity)
-  titleEl.style.transform = `translate3d(-50%, ${titleLift}px, 0)`
+  titleEl.style.transform = `translate3d(-50%, ${(1 - titleOpacity) * 18}px, 0)`
 
-  copyEl.style.opacity = String(textIn)
-  const copyShift = (1 - textIn) * 36
-  if (narrow) {
-    copyEl.style.transform = `translate3d(0, ${copyShift}px, 0)`
-  } else {
-    copyEl.style.transform = `translate3d(${copyShift}px, -50%, 0)`
-  }
+  typeEl.style.opacity = String(typeAmt)
+
+  formArticles.forEach((article, index) => {
+    article.style.opacity = String(weights[index] * captionGate)
+  })
+
+  copyEl.style.opacity = String(specAmt)
+  const copyShift = (1 - specAmt) * 28
+  if (narrow) copyEl.style.transform = `translate3d(0, ${copyShift}px, 0)`
+  else copyEl.style.transform = `translate3d(${copyShift}px, -50%, 0)`
+
+  openKicker.style.opacity = String(openChrome)
+  openIndex.style.opacity = String(openChrome)
+  nav.style.opacity = String(1 - openChrome)
+  nav.style.pointerEvents = openChrome > 0.55 ? 'none' : 'auto'
+
+  const stops = [0, 0.08, 0.4, 0.74]
+  let active = 0
+  stops.forEach((stop, index) => {
+    if (p >= stop - 0.001) active = index
+  })
+  navLinks.forEach((link, index) => link.classList.toggle('is-on', index === active))
 
   hintEl.style.opacity = String(hint)
   progressEl.style.transform = `scaleX(${p})`
+}
+
+function marginAt(p, poseMargin, narrow) {
+  const openM = narrow ? 2.55 : 3.05
+  const nearM = narrow ? 1.55 : 1.68
+  const typeM = narrow ? 2.85 : 3.35
+  const specM = narrow ? 3.1 : 1.72
+  const closeM = narrow ? 2.7 : 3.05
+  const turnM = lerp(openM, nearM, smoother(range(p, 0.08, 0.34)))
+
+  const gates = [
+    [1 - smoother(range(p, 0.06, 0.14)), openM],
+    [smoother(range(p, 0.06, 0.14)) * (1 - smoother(range(p, 0.36, 0.44))), turnM],
+    [smoother(range(p, 0.38, 0.46)) * (1 - smoother(range(p, 0.58, 0.66))), poseMargin],
+    [smoother(range(p, 0.6, 0.68)) * (1 - smoother(range(p, 0.7, 0.78))), typeM],
+    [smoother(range(p, 0.72, 0.8)) * (1 - smoother(range(p, 0.86, 0.93))), specM],
+    [smoother(range(p, 0.9, 0.97)), closeM],
+  ]
+
+  let sum = 0
+  let acc = 0
+  gates.forEach(([weight, margin]) => {
+    sum += weight
+    acc += weight * margin
+  })
+  if (sum < 0.001) return openM
+  return acc / sum
+}
+
+function formWeights(u) {
+  const centers = [0.14, 0.46, 0.78]
+  const raw = centers.map((center) => smoother(1 - clamp01(Math.abs(u - center) / 0.34)))
+  const sum = raw.reduce((total, weight) => total + weight, 0) || 1
+  return raw.map((weight) => weight / sum)
+}
+
+function blendPoses(weights) {
+  const pose = { yaw: 0, pitch: 0, margin: 0, look: 0 }
+  FORM_POSES.forEach((item, index) => {
+    const weight = weights[index]
+    pose.yaw += item.yaw * weight
+    pose.pitch += item.pitch * weight
+    pose.margin += item.margin * weight
+    pose.look += item.look * weight
+  })
+  return pose
+}
+
+function fitTypeTitle() {
+  typeEl.style.fontSize = '100px'
+  const width = typeEl.scrollWidth
+  if (!width) return
+  const target = window.innerWidth * (window.innerWidth < 860 ? 0.9 : 0.94)
+  typeEl.style.fontSize = `${(100 * target) / width}px`
 }
 
 function createStudioEnvironment(renderer) {

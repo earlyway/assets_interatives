@@ -18,6 +18,7 @@ body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
+  overflow-x: hidden;
 }
 
 body {
@@ -28,7 +29,7 @@ body {
 }
 
 #scroll-space {
-  height: 900vh;
+  height: 2800vh;
 }
 
 #view {
@@ -45,26 +46,63 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 3;
+  z-index: 4;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  height: 56px;
+  height: 64px;
   padding: 0 40px;
   color: var(--ink);
   pointer-events: none;
 }
 
-.nav-side {
+.head-left {
+  position: relative;
+  height: 100%;
+}
+
+#open-kicker,
+#nav {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+#open-kicker,
+.nav-side,
+#nav a {
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
   letter-spacing: 2px;
   text-transform: uppercase;
+  color: var(--muted);
 }
 
-.nav-side:last-child {
+#nav {
+  display: flex;
+  gap: 22px;
+  pointer-events: none;
+}
+
+#nav a {
+  color: var(--muted);
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+#nav a.is-on {
+  color: var(--ink);
+}
+
+#nav a:focus-visible {
+  outline: 1px solid var(--hairline);
+  outline-offset: 4px;
+}
+
+.nav-side {
   text-align: right;
 }
 
@@ -81,7 +119,7 @@ header {
 #hero-title {
   position: fixed;
   left: 50%;
-  bottom: 6vh;
+  bottom: 8vh;
   z-index: 3;
   margin: 0;
   transform: translateX(-50%);
@@ -97,19 +135,27 @@ header {
   pointer-events: none;
 }
 
-#copy {
+#form-copy {
   position: fixed;
-  top: 50%;
-  right: max(40px, 7vw);
+  left: max(40px, 6vw);
+  bottom: 12vh;
   z-index: 3;
-  width: min(420px, 34vw);
-  opacity: 0;
+  width: min(380px, 34vw);
+  height: 140px;
   pointer-events: none;
-  color: var(--ink);
 }
 
+#form-copy article {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+}
+
+#form-copy .kicker,
 #copy .kicker {
-  margin: 0 0 24px;
+  margin: 0 0 12px;
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 400;
@@ -119,14 +165,46 @@ header {
   color: var(--muted);
 }
 
-#copy h2 {
-  margin: 0 0 24px;
-  font-family: var(--display);
-  font-size: 32px;
+#form-copy p {
+  margin: 0;
+  font-family: var(--text);
+  font-size: 22px;
   font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  line-height: 1.45;
+  letter-spacing: 0;
+  color: var(--body);
+}
+
+#type-title {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  width: max-content;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 12vw;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: center;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#copy {
+  position: fixed;
+  top: 50%;
+  right: max(40px, 7vw);
+  z-index: 3;
+  width: min(440px, 36vw);
+  opacity: 0;
+  pointer-events: none;
+  color: var(--ink);
 }
 
 #copy p {
@@ -206,26 +284,13 @@ header {
   z-index: 5;
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: 12px;
   background: var(--canvas);
-  color: var(--ink);
   transition: opacity 0.6s ease;
-}
-
-#loader p {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 32px;
-  font-weight: 400;
-  line-height: 1.2;
-  letter-spacing: 2px;
-  text-transform: uppercase;
 }
 
 #loader span {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 2px;
   color: var(--muted);
@@ -236,17 +301,33 @@ header {
   pointer-events: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   header {
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: 0 16px;
   }
 
-  .nav-side:first-child {
-    font-size: 0;
+  #open-index {
+    display: none;
+  }
+
+  .wordmark {
+    justify-self: end;
+  }
+
+  #nav {
+    gap: 10px;
+  }
+
+  #nav a,
+  #open-kicker,
+  .nav-side {
+    font-size: 10px;
+    letter-spacing: 1px;
   }
 
   #hero-title {
-    bottom: 8vh;
+    bottom: 10vh;
     width: min(92vw, 640px);
     font-size: 32px;
     letter-spacing: 2px;
@@ -254,20 +335,31 @@ header {
     text-align: center;
   }
 
+  #form-copy {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: 8vh;
+  }
+
+  #form-copy p {
+    font-size: 18px;
+  }
+
   #copy {
-    top: auto;
-    bottom: 6vh;
+    top: 56%;
+    bottom: 16px;
     right: 16px;
     left: 16px;
     width: auto;
+    overflow: auto;
   }
 
-  #copy h2 {
-    font-size: 24px;
-    letter-spacing: 1.5px;
+  #copy dl {
+    margin-top: 20px;
   }
 
   #copy dl div {
-    padding: 16px 0;
+    padding: 14px 0;
   }
 }
