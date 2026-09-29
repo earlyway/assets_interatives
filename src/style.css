@@ -301,6 +301,31 @@ header {
   pointer-events: none;
 }
 
+#cursor {
+  display: none;
+}
+
+.fine-pointer,
+.fine-pointer * {
+  cursor: none;
+}
+
+.fine-pointer #cursor {
+  display: block;
+  position: fixed;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+  opacity: 0;
+}
+
 @media (max-width: 860px) {
   header {
     grid-template-columns: minmax(0, 1fr) auto;

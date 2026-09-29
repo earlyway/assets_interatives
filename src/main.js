@@ -117,11 +117,41 @@ navLinks.forEach((link) => {
 })
 
 const pointer = { x: 0, y: 0 }
+const pointerPrev = { x: 0, y: 0 }
 const pointerSmooth = { x: 0, y: 0 }
+const lean = { x: 0, y: 0 }
+const cursorEl = document.querySelector('#cursor')
+const cursorPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+const cursorTarget = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+const fineQuery = window.matchMedia('(pointer: fine)')
+let finePointer = fineQuery.matches
+let stillFor = 1
+let clock = 0
+let cursorReady = false
+let cursorOnLink = false
+let cursorScale = 1
+
+document.documentElement.classList.toggle('fine-pointer', finePointer)
+fineQuery.addEventListener('change', () => {
+  finePointer = fineQuery.matches
+  document.documentElement.classList.toggle('fine-pointer', finePointer)
+})
 
 window.addEventListener('pointermove', (event) => {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1
   pointer.y = (event.clientY / window.innerHeight) * 2 - 1
+  cursorTarget.x = event.clientX
+  cursorTarget.y = event.clientY
+  cursorReady = true
+})
+
+navLinks.forEach((link) => {
+  link.addEventListener('pointerenter', () => {
+    cursorOnLink = true
+  })
+  link.addEventListener('pointerleave', () => {
+    cursorOnLink = false
+  })
 })
 
 let targetP = 0
@@ -161,6 +191,26 @@ function tick(now) {
     pointerSmooth.x += (pointer.x - pointerSmooth.x) * pointerK
     pointerSmooth.y += (pointer.y - pointerSmooth.y) * pointerK
 
+    clock += dt
+    const moved = Math.hypot(pointer.x - pointerPrev.x, pointer.y - pointerPrev.y)
+    pointerPrev.x = pointer.x
+    pointerPrev.y = pointer.y
+    if (moved > 0.0015) stillFor = 0
+    else stillFor += dt
+    const leaning = finePointer && stillFor < 0.08
+    const leanK = 1 - Math.exp(-2.4 * dt)
+    lean.x += ((leaning ? pointer.x : 0) - lean.x) * leanK
+    lean.y += ((leaning ? pointer.y : 0) - lean.y) * leanK
+
+    if (finePointer) {
+      const cursorK = 1 - Math.exp(-8 * dt)
+      cursorPos.x += (cursorTarget.x - cursorPos.x) * cursorK
+      cursorPos.y += (cursorTarget.y - cursorPos.y) * cursorK
+      cursorScale += ((cursorOnLink ? 14 / 8 : 1) - cursorScale) * cursorK
+      cursorEl.style.opacity = cursorReady ? '1' : '0'
+      cursorEl.style.transform = `translate3d(${cursorPos.x}px, ${cursorPos.y}px, 0) scale(${cursorScale})`
+    }
+
     update(progress)
     renderer.render(scene, camera)
   } catch (err) {
@@ -189,8 +239,14 @@ function update(p) {
   const openChrome = 1 - smoother(range(p, 0.04, 0.1))
   const hint = 1 - smoother(range(p, 0.012, 0.05))
   const formLight = smoother(range(p, 0.4, 0.45)) * (1 - smoother(range(p, 0.58, 0.62)))
+  const openInfluence = 1 - smoother(range(p, 0.04, 0.08))
+  const idle = Math.sin((clock * Math.PI * 2) / 40) * THREE.MathUtils.degToRad(2) * openInfluence
+  const yawLean = -lean.x * THREE.MathUtils.degToRad(10) * openInfluence
+  const pitchLean = lean.y * THREE.MathUtils.degToRad(6) * openInfluence
 
-  pivot.rotation.y = BASE_YAW + turn * Math.PI * 2 * TURNS
+  pivot.rotation.y = BASE_YAW + turn * Math.PI * 2 * TURNS + idle + yawLean
+  pivot.rotation.x = pitchLean
+  pivot.rotation.z = 0
 
   const margin = marginAt(p, pose.margin, narrow)
   const width = Math.max(dims.x, dims.z)
@@ -198,11 +254,11 @@ function update(p) {
   const halfH = Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * dist
   const halfW = halfH * camera.aspect
 
-  let ndcX = 0
-  let ndcY = lift * (narrow ? 0.2 : 0.26)
+  let ndcX = lean.x * 0.04 * openInfluence
+  let ndcY = -lean.y * 0.04 * openInfluence + lift * (narrow ? 0.2 : 0.26)
   ndcY -= weights[2] * formHold * (narrow ? 0.04 : 0.1)
   if (narrow) ndcY += specAmt * 0.28 + captionGate * 0.08
-  else ndcX = specAmt * -0.46
+  else ndcX += specAmt * -0.46
 
   pivot.position.set(ndcX * halfW, ndcY * halfH, 0)
 
@@ -217,9 +273,10 @@ function update(p) {
   )
   camera.lookAt(0, lookY, 0)
 
+  const openLight = openInfluence * (finePointer ? 1 : 0)
   key.position.set(
-    2.2 + pointerSmooth.x * 0.65 * formLight,
-    3.4 - pointerSmooth.y * 0.4 * formLight,
+    2.2 + pointerSmooth.x * 0.65 * formLight + lean.x * 0.22 * openLight,
+    3.4 - pointerSmooth.y * 0.4 * formLight - lean.y * 0.14 * openLight,
     2.6,
   )
 
@@ -254,7 +311,7 @@ function update(p) {
 }
 
 function marginAt(p, poseMargin, narrow) {
-  const openM = narrow ? 2.55 : 3.05
+  const openM = narrow ? 2.35 : 2.22
   const nearM = narrow ? 1.55 : 1.68
   const typeM = narrow ? 2.85 : 3.35
   const specM = narrow ? 3.1 : 1.72
